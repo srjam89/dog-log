@@ -1,6 +1,6 @@
 import { Dog, Pencil, Star, Trash2 } from "lucide-react";
 
-const formatDate = (value) => {
+const formatDate = (value) => { 
   const date = new Date(value);
   return Number.isNaN(date.getTime())
     ? String(value || "")
