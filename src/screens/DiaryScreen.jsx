@@ -158,7 +158,6 @@ export default function DiaryScreen() {
             onEdit={() =>
               navigate(
                 `/${activity.type === "training" ? "training" : "walks"}/${activity.id}/edit`,
-                { state: { activity } },
               )
             }
             onDelete={() => setDeleting(activity)}

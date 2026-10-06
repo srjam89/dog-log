@@ -54,7 +54,16 @@ export default function ActivityForm({ type }) {
   const navigate = useNavigate();
   const location = useLocation();
   const activeDogId = useAppStore((state) => state.activeDogId);
-  const [activity, setActivity] = useState(location.state?.activity || null);
+  const userId = useAppStore((state) => state.session?.user?.id ?? null);
+  const [loadedActivity, setLoadedActivity] = useState({
+    activity: null,
+    activityId: null,
+    userId: null,
+  });
+  const activity =
+    loadedActivity.activityId === activityId && loadedActivity.userId === userId
+      ? loadedActivity.activity
+      : null;
   const [dogs, setDogs] = useState([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(!!activityId && !activity);
@@ -96,21 +105,56 @@ export default function ActivityForm({ type }) {
         },
   });
   useEffect(() => {
+    let cancelled = false;
+    setDogs([]);
+    if (!userId) return undefined;
     dogService
       .listDogs()
-      .then(setDogs)
-      .catch((requestError) => setError(requestError.message));
-  }, []);
+      .then((result) => {
+        if (!cancelled) setDogs(result);
+      })
+      .catch((requestError) => {
+        if (!cancelled) setError(requestError.message);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
   useEffect(() => {
-    if (!activityId || activity) return;
+    if (!activityId || !userId) {
+      setLoading(false);
+      return undefined;
+    }
+    let cancelled = false;
+    setLoading(true);
+    setError("");
     const get = training
       ? activityService.getTrainingSession
       : activityService.getWalk;
     get(activityId)
-      .then(setActivity)
-      .catch((requestError) => setError(requestError.message))
-      .finally(() => setLoading(false));
-  }, [activityId, activity, training]);
+      .then((result) => {
+        if (!cancelled) {
+          setLoadedActivity({ activity: result, activityId, userId });
+        }
+      })
+      .catch((requestError) => {
+        if (!cancelled) setError(requestError.message);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activityId, training, userId]);
+  useEffect(() => {
+    if (activityId && location.state) {
+      navigate(`${location.pathname}${location.search}${location.hash}`, {
+        replace: true,
+        state: null,
+      });
+    }
+  }, [activityId, location.hash, location.pathname, location.search, location.state, navigate]);
   useEffect(() => {
     if (!activity) return;
     const common = {
@@ -200,6 +244,20 @@ export default function ActivityForm({ type }) {
       setDeleting(false);
     }
   };
+  if (activityId && !activity) {
+    if (loading || !error) return <LoadingScreen label="Loading entry…" />;
+    return (
+      <div className="page page--narrow">
+        <PageHeader
+          title={`Edit ${training ? "training" : "a walk"}`}
+          back={() => navigate(-1)}
+        />
+        <p className="alert" role="alert">
+          {error}
+        </p>
+      </div>
+    );
+  }
   if (loading) return <LoadingScreen label="Loading entry…" />;
   return (
     <div className="page page--narrow">

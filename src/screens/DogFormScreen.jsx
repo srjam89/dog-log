@@ -6,6 +6,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Camera } from 'lucide-react';
 import { dogService } from '../services';
 import { Button, FormField, LoadingScreen, PageHeader } from '../components';
+import { useAppStore } from '../store';
 
 const schema = z.object({
   name: z.string().trim().min(1, 'Name is required').max(60),
@@ -22,7 +23,11 @@ export default function DogFormScreen() {
   const { dogId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const [dog, setDog] = useState(location.state?.dog || null);
+  const userId = useAppStore((state) => state.session?.user?.id ?? null);
+  const [loadedDog, setLoadedDog] = useState({ dog: null, dogId: null, userId: null });
+  const dog = loadedDog.dogId === dogId && loadedDog.userId === userId
+    ? loadedDog.dog
+    : null;
   const [loading, setLoading] = useState(!!dogId && !dog);
   const [error, setError] = useState('');
   const [preview, setPreview] = useState(dog?.photoUrl || '');
@@ -31,9 +36,35 @@ export default function DogFormScreen() {
     defaultValues: { name: '', breed: '', birthDate: '', weight: '', weightUnit: 'kg', sex: 'unknown', notes: '', photoFile: undefined },
   });
   useEffect(() => {
-    if (!dogId || dog) return;
-    dogService.getDog(dogId).then(setDog).catch((requestError) => setError(requestError.message)).finally(() => setLoading(false));
-  }, [dogId, dog]);
+    if (dogId && location.state) {
+      navigate(`${location.pathname}${location.search}${location.hash}`, {
+        replace: true,
+        state: null,
+      });
+    }
+  }, [dogId, location.hash, location.pathname, location.search, location.state, navigate]);
+  useEffect(() => {
+    if (!dogId || !userId) {
+      setLoading(false);
+      return undefined;
+    }
+    let cancelled = false;
+    setLoading(true);
+    setError('');
+    dogService.getDog(dogId)
+      .then((result) => {
+        if (!cancelled) setLoadedDog({ dog: result, dogId, userId });
+      })
+      .catch((requestError) => {
+        if (!cancelled) setError(requestError.message);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [dogId, userId]);
   useEffect(() => {
     if (!dog) return;
     reset({ name: dog.name || '', breed: dog.breed || '', birthDate: dog.birthDate || '', weight: dog.weight ?? '', weightUnit: dog.weightUnit || 'kg', sex: dog.sex || 'unknown', notes: dog.notes || '', photoFile: undefined });
@@ -53,6 +84,10 @@ export default function DogFormScreen() {
       navigate(dogId ? `/dogs/${dogId}` : '/dogs');
     } catch (requestError) { setError(requestError.message || 'Could not save this profile.'); }
   };
+  if (dogId && !dog) {
+    if (loading || !error) return <LoadingScreen label="Loading dog details…" />;
+    return <div className="page page--narrow"><PageHeader title="Edit dog" back={() => navigate(-1)} /><p className="alert" role="alert">{error}</p></div>;
+  }
   if (loading) return <LoadingScreen label="Loading dog details…" />;
   return <div className="page page--narrow"><PageHeader title={dogId ? `Edit ${dog?.name || 'dog'}` : 'Add a dog'} back={() => navigate(-1)} />
     <form className="stack" onSubmit={handleSubmit(submit)}>

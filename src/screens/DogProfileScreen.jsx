@@ -56,7 +56,7 @@ export default function DogProfileScreen() {
         actions={
           <Button
             variant="secondary"
-            onClick={() => navigate(`/dogs/${dog.id}/edit`, { state: { dog } })}
+            onClick={() => navigate(`/dogs/${dog.id}/edit`)}
           >
             <Pencil size={18} /> Edit
           </Button>
@@ -103,7 +103,6 @@ export default function DogProfileScreen() {
             onClick={() =>
               navigate(
                 `/${activity.type === "training" ? "training" : "walks"}/${activity.id}/edit`,
-                { state: { activity } },
               )
             }
           />

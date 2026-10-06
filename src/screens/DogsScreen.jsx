@@ -105,9 +105,7 @@ export default function DogsScreen() {
                   <Button
                     variant="ghost"
                     aria-label={`Edit ${dog.name}`}
-                    onClick={() =>
-                      navigate(`/dogs/${dog.id}/edit`, { state: { dog } })
-                    }
+                    onClick={() => navigate(`/dogs/${dog.id}/edit`)}
                   >
                     <Pencil size={18} />
                   </Button>

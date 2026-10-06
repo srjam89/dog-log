@@ -107,7 +107,6 @@ export default function DashboardScreen() {
                 onClick={() =>
                   navigate(
                     `/${activity.type === "training" ? "training" : "walks"}/${activity.id}/edit`,
-                    { state: { activity } },
                   )
                 }
               />
