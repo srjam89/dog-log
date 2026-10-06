@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import { createJSONStorage, persist } from 'zustand/middleware';
+import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
 
 export const useAppStore = create(
   persist(
@@ -8,9 +8,18 @@ export const useAppStore = create(
       isAuthLoading: true,
       activeDog: null,
       activeDogId: null,
-      themeMode: 'system',
-      setSession: (session) => set({ session }),
-      clearSession: () => set({ session: null }),
+      themeMode: "system",
+      setSession: (session) =>
+        set((state) => {
+          const previousUserId = state.session?.user?.id ?? null;
+          const nextUserId = session?.user?.id ?? null;
+          if (!session || previousUserId !== nextUserId) {
+            return { session, activeDog: null, activeDogId: null };
+          }
+          return { session };
+        }),
+      clearSession: () =>
+        set({ session: null, activeDog: null, activeDogId: null }),
       setAuthLoading: (isAuthLoading) => set({ isAuthLoading }),
       setActiveDog: (activeDog) =>
         set({
@@ -22,13 +31,13 @@ export const useAppStore = create(
       setThemeMode: (themeMode) => set({ themeMode }),
     }),
     {
-      name: 'pawjournal-app',
+      name: "pawjournal-app",
+      version: 1,
       storage: createJSONStorage(() => localStorage),
-      partialize: ({ themeMode, activeDog, activeDogId }) => ({
-        themeMode,
-        activeDog,
-        activeDogId,
+      migrate: (persistedState) => ({
+        themeMode: persistedState?.themeMode ?? "system",
       }),
+      partialize: ({ themeMode }) => ({ themeMode }),
     },
   ),
 );
